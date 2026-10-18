@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>乌帕斯·倒悬于地</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23000000'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23e33a3a'/%3E%3C/svg%3E">
+<style>
+/* ===== 基础 ===== */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --red:#e33a3a; --red-deep:#b02424;
+  --ink:#16161a; --paper:#ffffff;
+  --bubble-l:#eaeaee; --bubble-r:#26262d;
+  --ink-l:#1c1c22;
+  --line:#e5e5e8; --gray:#8a8a92; --tagbg:#efeff2;
+  --dark:#0a0a0c;
+}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+  background:#c9c9d0; color:var(--ink); line-height:1.6;
+  font-style:normal;
+}
+button{font-family:inherit;font-style:normal;cursor:pointer;border:none;background:none;color:inherit}
+a{text-decoration:none;color:inherit}
+
+/* ===== 手机壳容器 ===== */
+.app{
+  position:relative; height:100dvh; max-width:480px; margin:0 auto;
+  background:var(--paper); overflow:hidden;
+}
+@media (min-width:560px){
+  .app{border-radius:26px;box-shadow:0 18px 50px rgba(0,0,0,.28); margin-top:0;}
+}
+
+/* ===== 三屏滑动舞台 ===== */
+.screen{
+  position:absolute; inset:0; width:100%; height:100%;
+  transform:translateX(0);
+  transition:transform .62s cubic-bezier(.4,.06,.2,1);
+  will-change:transform;
+}
+.screen .scroll{position:absolute; inset:0; overflow-y:auto; -webkit-overflow-scrolling:touch; scroll-behavior:auto}
+
+/* ===== 通用箭头 ===== */
+.arrow-btn{
+  position:absolute; top:calc(14px + env(safe-area-inset-top)); z-index:5;
+  width:44px;height:44px; display:flex;align-items:center;justify-content:center;
+  color:var(--ink); opacity:.9;
+}
+.arrow-btn.left{left:6px}
+.arrow-btn.right{right:6px}
+.arrow-btn svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ================= 页面三：个人主页 ================= */
+#view-profile{background:#fff}
+.profile-page{max-width:420px;margin:0 auto;padding:96px 26px 56px}
+.profile-top{display:flex;flex-direction:column;align-items:center;text-align:center}
+.avatar-big{
+  width:96px;height:96px;border-radius:50%;background:#000;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;font-weight:600;
+}
+.nick{margin-top:16px;font-size:22px;font-weight:700;letter-spacing:.5px}
+.nick .at{color:var(--gray);font-weight:400;font-size:18px}
+.sig{margin-top:8px;font-size:15px;color:#3a3a40}
+.tagrow{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:16px}
+.tag{
+  padding:3px 12px;border:1px solid #cfcfd4;border-radius:8px;
+  background:var(--tagbg);color:#5b5b62;font-size:12px;line-height:1.7;
+  transition:all .25s ease; user-select:none;
+}
+.tag.on{background:var(--red);border-color:var(--red);color:#fff}
+
+.divider{width:70%;height:1px;background:var(--line);margin:34px auto 26px}
+
+.style-block{text-align:center}
+.style-title{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:2px}
+.style-sub{font-size:12px;color:var(--red);margin-top:6px}
+.style-cols{margin-top:18px;display:flex;flex-direction:column;gap:10px;font-size:15px;color:#26262c}
+.style-small{margin-top:26px;font-size:12.5px;color:#3c3c42;line-height:2.1;max-width:400px;margin-left:auto;margin-right:auto}
+.style-small .rd{color:var(--red)}
+.style-small b{font-weight:400;color:var(--red)}
+
+.profile-return{
+  position:sticky;bottom:22px;margin:34px auto 6px;display:flex;align-items:center;justify-content:center;
+  width:160px;height:48px;border-radius:24px;background:var(--ink);color:#fff;font-size:14px;letter-spacing:1px;
+  opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .4s,transform .4s;
+}
+.profile-return.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.profile-hint{text-align:center;font-size:12px;color:#9a9aa2;margin:26px auto 8px;letter-spacing:1px}
+
+/* ================= 页面二：聊天 ================= */
+#view-chat{background:var(--paper)}
+.chat-hd{
+  position:absolute;top:0;left:0;right:0;z-index:6;
+  padding:calc(12px + env(safe-area-inset-top)) 8px 12px;
+  background:rgba(255,255,255,.9);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+}
+.chat-hd .name{font-size:16px;font-weight:600;line-height:1.3}
+.chat-hd .note{font-size:11px;color:var(--gray);letter-spacing:1px}
+.chat-hd .back{position:absolute;left:4px;top:50%;transform:translateY(-50%);}
+.chat-hd .menu{position:absolute;right:4px;top:50%;transform:translateY(-50%);}
+.messages{position:absolute;top:0;left:0;right:0;bottom:70px;overflow-y:auto;padding:112px 14px 16px;-webkit-overflow-scrolling:touch}
+.sysmsg{
+  text-align:center;font-size:12.5px;color:var(--gray);margin:8px auto 18px;max-width:280px;line-height:1.7;
+  opacity:0;transform:translateY(-4px);transition:opacity .8s,transform .8s;
+}
+.sysmsg.on{opacity:1;transform:none}
+.msg{display:flex;align-items:flex-end;margin:7px 0;max-width:100%}
+.msg.left{justify-content:flex-start}
+.msg.right{justify-content:flex-end}
+.avatar{width:40px;height:40px;min-width:40px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;margin-right:9px;cursor:pointer}
+.msg.right .avatar{display:none}
+.bubble{
+  padding:11px 16px;font-size:15.5px;line-height:1.62;word-break:break-word;
+  border-radius:24px;max-width:76%;
+  opacity:0;
+}
+.bubble.l{
+  background:var(--bubble-l);color:var(--ink);border-bottom-left-radius:6px;
+}
+.bubble.r{
+  background:var(--bubble-r);color:#f4f4f6;border-bottom-right-radius:6px;
+}
+.msg.send .bubble{animation:pop .32s cubic-bezier(.2,1.2,.4,1) forwards}
+@keyframes pop{
+  0%{opacity:0;transform:scale(.55) translateY(12px)}
+  100%{opacity:1;transform:scale(1) translateY(0)}
+}
+.typingbubble{display:flex;align-items:center;gap:4px;padding:13px 17px;background:var(--bubble-l);border-radius:24px;border-bottom-left-radius:6px;margin:7px 0;width:fit-content}
+.typingbubble i{width:6px;height:6px;border-radius:50%;background:#9a9aa2;animation:blink 1s infinite}
+.typingbubble i:nth-child(2){animation-delay:.18s}
+.typingbubble i:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+
+.choices{display:flex;flex-direction:column;align-items:center;gap:9px;margin:16px 0 4px}
+.choice{
+  max-width:88%;width:fit-content;padding:11px 22px;border-radius:22px;
+  border:1.5px solid #c7c7cd;color:#2a2a30;font-size:15px;background:#fff;
+  transition:all .22s ease;animation:rise .3s ease backwards;text-align:center;
+}
+.choice:hover,.choice:active{background:var(--ink);color:#fff;border-color:var(--ink)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.typingbar{
+  position:absolute;left:0;right:0;bottom:0;z-index:6;
+  padding:9px 14px calc(10px + env(safe-area-inset-bottom));
+  background:var(--paper);border-top:1px solid var(--line);
+}
+.tb-inner{
+  display:flex;align-items:center;height:40px;border-radius:20px;background:#f0f0f2;padding:0 15px;
+  color:#a0a0a8;font-size:14px;
+}
+.tb-dots{display:none;align-items:center;gap:4px;height:40px}
+.tb-dots.show{display:flex}
+.tb-dots i{width:5px;height:5px;border-radius:50%;background:#8a8a92;animation:blink .9s infinite}
+.tb-dots i:nth-child(2){animation-delay:.16s}
+.tb-dots i:nth-child(3){animation-delay:.32s}
+.tb-text{letter-spacing:.5px}
+
+/* ================= 页面四：详情页 ================= */
+#view-detail{
+  background:linear-gradient(180deg,#040405 0%,#0c0708 40%,#180a0c 78%,#260f12 100%);
+  color:#e7e7ea;
+}
+#particles{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.detail-scroll{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:2;padding:96px 26px 64px}
+.detail-scroll::-webkit-scrollbar{width:0}
+.d-back{color:#f0d9d9}
+.d-hero{margin-bottom:40px}
+.d-hero-en{color:#9a6a6a;font-size:11px;letter-spacing:4px;text-transform:uppercase}
+.d-hero-cn{margin-top:10px;font-size:34px;font-weight:800;letter-spacing:4px;color:#fff;text-shadow:0 0 26px rgba(227,58,58,.6);font-family:"Songti SC","STSong","SimSun","Noto Serif SC",serif}
+.d-hero-line{margin-top:10px;font-size:13px;color:#c98a8a;letter-spacing:1px}
+.d-section{margin-bottom:44px}
+.d-h{color:#fff;font-size:17px;font-weight:700;letter-spacing:2px;display:flex;align-items:center;gap:10px;margin-bottom:18px;font-family:"Songti SC","STSong","SimSun","Noto Serif SC",serif}
+.d-h .en{font-size:10px;color:#9a6a6a;letter-spacing:2px;font-weight:400}
+.d-h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--red),transparent)}
+.d-body{font-size:14px;color:#e6c9c9;line-height:2.1;white-space:pre-line}
+.more-list{margin-top:6px}
+.more-item:hover .tl-card{background:rgba(227,58,58,.12)}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease}
+.reveal.on{opacity:1;transform:none}
+.tl-item{margin-bottom:7px}
+.tl-card{
+  position:relative;display:flex;align-items:baseline;width:100%;
+  background:rgba(0,0,0,.82);border:1px solid rgba(227,58,58,.35);border-radius:6px;
+  padding:9px 13px 9px 18px;font-size:12.5px;color:#d8c9c9;line-height:1.7;
+  cursor:pointer;transition:all .25s ease;
+}
+.tl-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:6px 0 0 6px;
+  background:linear-gradient(180deg,rgba(227,58,58,.75),rgba(227,58,58,.15));
+  box-shadow:0 0 6px rgba(227,58,58,.25);
+}
+.tl-card .num{color:#ff6b6b;font-weight:700;margin-right:9px;letter-spacing:.5px;font-size:11px}
+.tl-card.glow{background:rgba(46,11,13,.92);border-color:var(--red);color:#fff}
+.tl-card.glow::before{background:linear-gradient(180deg,#e33a3a,#b02424);box-shadow:0 0 10px rgba(227,58,58,.5)}
+.tl-card.mrow{justify-content:space-between;font-size:13.5px;color:#f2e2e2}
+.tl-card .arr{color:var(--red);font-size:14px;margin-left:14px}
+
+/* 音效选择面板（已停用，保留样式占位） */
+#soundpanel{position:fixed;left:50%;bottom:0;transform:translate(-50%,110%);width:100%;max-width:480px;background:#16161a;border-top-left-radius:18px;border-top-right-radius:18px;padding:18px 20px calc(22px + env(safe-area-inset-bottom));z-index:80;transition:transform .35s ease;box-shadow:0 -8px 30px rgba(0,0,0,.4)}
+#soundpanel.show{transform:translate(-50%,0)}
+.sp-title{font-size:13px;color:#fff;font-weight:600;letter-spacing:2px;margin-bottom:6px}
+.sp-opt{display:flex;justify-content:space-between;align-items:center;padding:13px 4px;border-bottom:1px solid rgba(255,255,255,.08);font-size:14px;color:#d5d5da;cursor:pointer}
+.sp-opt.on{color:#e33a3a}
+
+/* ================= 开场黑屏 + 短信横幅 ================= */
+#start{position:fixed;inset:0;z-index:50;background:#000;display:flex;align-items:flex-start;justify-content:center;padding-top:90px}
+.notif{
+  width:min(92%,360px);background:#1c1c20;border:1px solid #2c2c32;border-radius:22px;
+  padding:16px 18px;color:#e9e9ee;box-shadow:0 10px 34px rgba(0,0,0,.5);
+  opacity:0;transform:translateY(14px);transition:opacity .8s,transform .8s;cursor:pointer;
+}
+.notif.on{opacity:1;transform:none}
+.notif-row{display:flex;align-items:center;gap:11px}
+.notif-ic{width:38px;height:38px;min-width:38px;border-radius:50%;background:#000}
+.notif-t{font-size:13px;font-weight:600;color:#fff}
+.notif-m{font-size:13.5px;color:#b9b9c2;margin-top:9px}
+.notif-opts{display:flex;gap:12px;margin-top:16px;max-height:0;overflow:hidden;transition:max-height .45s ease;justify-content:center}
+.notif.opened .notif-opts{max-height:80px}
+.notif-opts button{
+  width:68px;height:40px;border-radius:12px;font-size:14px;color:#fff;
+  transition:all .2s;
+}
+.notif-yes{background:#3a0d10;border:1.5px solid var(--red);color:#ff9a9a}
+.notif-no{background:#1a1a1f;border:1.5px solid #5a2a2e;color:#c9c9cf}
+.notif-no.flash{background:var(--red);box-shadow:0 0 0 0 rgba(227,58,58,.0);animation:flashred .5s ease 2}
+@keyframes flashred{0%{box-shadow:0 0 0 3px rgba(227,58,58,.55)}100%{box-shadow:0 0 0 3px rgba(227,58,58,0)}}
+.notif-hint{text-align:center;font-size:11.5px;color:#6f6f78;margin-top:12px}
+
+/* ===== 启屏动画 ===== */
+#splash{position:fixed;inset:0;z-index:60;background:#000;display:none;align-items:center;justify-content:center;flex-direction:column}
+#splash.show{display:flex}
+.splash-dot{font-size:60px;color:#fff;font-weight:600;opacity:0;animation:appearDot 1.4s ease forwards}
+@keyframes appearDot{0%{opacity:0;transform:scale(.6)}35%{opacity:1;transform:scale(1.1)}70%{opacity:1}100%{opacity:0;transform:scale(1)}}
+.splash-sub{color:#5c5c64;font-size:11px;letter-spacing:6px;margin-top:10px;opacity:0;animation:fadein 1s .5s forwards}
+
+/* ===== 结局黑屏 ===== */
+#ending{position:fixed;inset:0;z-index:55;background:#000;display:none;align-items:center;justify-content:center;flex-direction:column;padding:0 26px}
+#ending.show{display:flex}
+.end-line{
+  font-size:22px;color:var(--red);text-align:center;font-weight:600;letter-spacing:1px;
+  position:relative;opacity:0;transition:opacity 1.2s;
+}
+.end-line.on{opacity:1}
+.end-line[data-text]::before,.end-line[data-text]::after{content:attr(data-text);position:absolute;inset:0;opacity:.7;pointer-events:none}
+.end-line[data-text]::before{color:#ff5a5a;animation:glitchA 1.6s infinite steps(2)}
+.end-line[data-text]::after{color:#ff3b3b;animation:glitchB 1.3s infinite steps(2)}
+@keyframes glitchA{0%{transform:translate(0)}15%{transform:translate(-3px,1px);clip-path:inset(0 0 60% 0)}30%{transform:translate(2px,-1px)}45%{transform:translate(-2px,2px);clip-path:inset(40% 0 0 0)}60%{transform:translate(1px,0)}75%{transform:translate(-3px,-1px);clip-path:inset(0 40% 0 0)}100%{transform:translate(0)}}
+@keyframes glitchB{0%{transform:translate(0)}20%{transform:translate(3px,-1px);clip-path:inset(60% 0 0 0)}40%{transform:translate(-2px,1px)}60%{transform:translate(2px,-2px);clip-path:inset(0 0 30% 0)}80%{transform:translate(-1px,0)}100%{transform:translate(0)}}
+.end-yes{
+  margin-top:56px;min-width:150px;height:48px;padding:0 34px;border-radius:12px;background:#3a0d10;border:1.5px solid var(--red);color:#ff9a9a;font-size:16px;font-weight:600;
+  letter-spacing:2px;opacity:0;transform:translateY(8px);transition:opacity .8s,transform .8s;
+}
+.end-yes.on{opacity:1;transform:none}
+.end-yes:hover{background:#5a1418}
+
+/* ===== 音乐开关 ===== */
+#music-toggle{
+  position:absolute;right:14px;bottom:78px;z-index:7;
+  width:38px;height:38px;border-radius:50%;
+  background:#000;color:#fff;
+  border:1.5px solid #e33a3a;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 8px rgba(227,58,58,.4);
+  transition:all .3s ease;
+}
+#music-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
+#music-toggle.playing{background:#1a0505;border-color:#ff5a5a;box-shadow:0 0 12px rgba(227,58,58,.7)}
+#music-toggle.playing .ic-on{display:block}
+#music-toggle.playing .ic-off{display:none}
+#music-toggle:not(.playing) .ic-on{display:none}
+#music-toggle:not(.playing) .ic-off{display:block}
+
+/* ===== 提示 toast ===== */
+#toast{position:fixed;left:50%;bottom:34px;transform:translate(-50%,16px);z-index:90;
+  background:rgba(20,20,24,.92);color:#eee;font-size:13px;padding:11px 20px;border-radius:20px;
+  opacity:0;transition:opacity .35s,transform .35s;max-width:84%;text-align:center;pointer-events:none}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion:reduce){
+  .screen{transition-duration:.1s}
+  .bubble,.choice,.sysmsg,.notif,.end-line{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 三屏滑动舞台 ===== -->
+<div class="app">
+  <!-- 页面三：个人主页 -->
+  <section id="view-profile" class="screen">
+    <button class="arrow-btn right" data-go="backchat" aria-label="返回对话">
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+    <div class="profile-page scroll" id="profile-scroll">
+      <div class="profile-top">
+        <div class="avatar-big"></div>
+        <div class="nick"><span class="at">@</span>乌帕斯</div>
+        <div class="sig">就应该咽不下吐不出如鲠在喉</div>
+        <div class="tagrow" id="tagrow">
+          <span class="tag" data-tag="18">18</span>
+          <span class="tag" data-tag="天蝎">天蝎</span>
+          <span class="tag" data-tag="T">T</span>
+          <span class="tag" data-tag="intp">intp</span>
+          <span class="tag" data-tag="七八无">七﹣八无</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="style-block">
+        <div class="style-title">Style</div>
+        <div class="style-sub">-近期恶劣戏谑-</div>
+        <div class="style-cols">
+          <div>恶劣戏谑 · 嬉皮笑脸 · 斯文败类</div>
+          <div>温和诱导 · 得寸进尺 · 死流氓</div>
+        </div>
+        <div style="height:16px"></div>
+        <div class="style-small" id="style-small">引导·高压·剖析·逻辑·白话·高恋·中恋·低无·疯/温·伪高·恶趣味·微/高擦·诡辩·一针见血·贬低·精控·物化·训诫·动物塑</div>
+      </div>
+
+      <div class="profile-hint">点击回到对话框</div>
+      <div class="profile-return" id="profile-return">返回对话</div>
+    </div>
+  </section>
+
+  <!-- 页面二：聊天 -->
+  <section id="view-chat" class="screen">
+    <div class="chat-hd">
+      <button class="arrow-btn back chat-back-btn" data-go="profile" aria-label="返回主页">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="name">。</div>
+      <div class="note">备注 · 乌帕斯</div>
+      <button class="arrow-btn menu chat-menu-btn" aria-label="更多">
+        <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+      </button>
+    </div>
+    <div class="messages scroll" id="messages"></div>
+    <div class="typingbar">
+      <div class="tb-inner" id="tb-inner"><span class="tb-text" id="tb-text">正在输入…</span></div>
+      <div class="tb-dots" id="tb-dots"><i></i><i></i><i></i></div>
+    </div>
+    <button id="music-toggle" aria-label="音乐开关">
+      <svg class="ic-on" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="18" cy="16" r="3" fill="currentColor"/></svg>
+      <svg class="ic-off" viewBox="0 0 24 24" style="display:none"><path d="M9 18V5l12-2v13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="18" cy="16" r="3" fill="currentColor"/><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <audio id="bgm" loop preload="auto" src="https://music.163.com/song/media/outer/url?id=2739853779.mp3"></audio>
+  </section>
+
+  <!-- 页面四：详情页 -->
+  <section id="view-detail" class="screen">
+    <canvas id="particles"></canvas>
+    <button class="arrow-btn left d-back" data-go="chat" aria-label="返回对话页">
+      <svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+    </button>
+    <div class="detail-scroll">
+      <div class="d-hero reveal">
+        <div class="d-hero-en">Epilogue</div>
+        <div class="d-hero-cn">至死方休</div>
+      </div>
+
+      <div class="d-section reveal">
+        <div class="d-h"><span>补充</span><span class="en">ABOUT</span></div>
+        <div class="tl">
+          <div class="tl-item"><div class="tl-card"><span class="num">01/</span>病恋主架构为语言交锋，必带逻辑和剖析，带有个人理解元素</div></div>
+          <div class="tl-item"><div class="tl-card"><span class="num">02/</span>非常见模板病恋，高恋感代表我很喜欢你单内感兴趣我会直接上升恋感</div></div>
+          <div class="tl-item"><div class="tl-card"><span class="num">03/</span>更讲究对于双方心理的探索，真不善于讨好谄媚，也不善于哄人</div></div>
+          <div class="tl-item"><div class="tl-card"><span class="num">04/</span>非绝对但自利、主体性强</div></div>
+          <div class="tl-item"><div class="tl-card"><span class="num">05/</span>不喜欢说假话也不乐意听假话，我绝对坦诚</div></div>
+          <div class="tl-item"><div class="tl-card"><span class="num">06/</span>想吃纯m讨好别来找我，我不适合你</div></div>
+          <div class="tl-item"><div class="tl-card"><span class="num">07/</span>能够得到什么风格的我绝大部分取决于你的态度与回应</div></div>
+          <div class="tl-item"><div class="tl-card"><span class="num">08/</span>很懒得接单，见我随缘</div></div>
+        </div>
+      </div>
+
+      <div class="d-section reveal">
+        <div class="d-h"><span>更多</span><span class="en">MORE</span></div>
+        <div class="tl"><div class="more-list" id="more-list"></div></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- 开场黑屏 + 短信横幅 -->
+<div id="start">
+  <div class="notif" id="notif">
+    <div class="notif-row">
+      <div class="notif-ic"></div>
+      <div class="notif-t">新朋友</div>
+    </div>
+    <div class="notif-m">你有一条新的好友申请，是否通过？</div>
+    <div class="notif-opts">
+      <button class="notif-yes" id="notif-yes" onclick="window.__yes(event)">是</button>
+      <button class="notif-no" id="notif-no" onclick="window.__no(event)">否</button>
+    </div>
+  </div>
+</div>
+
+<!-- 启屏动画 -->
+<div id="splash">
+  <div class="splash-dot"> </div>
+  <div class="splash-sub">添加成功</div>
+</div>
+
+<!-- 结局黑屏 -->
+<div id="ending">
+  <div class="end-line" id="end-line" data-text="我也想成为你幸福的一部分">我也想成为你幸福的一部分</div>
+  <button class="end-yes" id="end-yes">Yes</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ===== 音频（WebAudio 合成，首次点击后启用） ===== */
+const AudioSys=(function(){
+  let ctx=null;
+  function ensure(){ if(!ctx){ try{ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return null;} }
+    if(ctx.state==='suspended')ctx.resume(); return ctx; }
+  let typingStyle='soft';
+  function typing(){
+    const c=ensure(); if(!c)return; const t=c.currentTime;
+    if(typingStyle==='bubble'){
+      const o=c.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(780,t); o.frequency.exponentialRampToValueAtTime(260,t+.09);
+      const g=c.createGain(); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.035,t+.012); g.gain.exponentialRampToValueAtTime(.0001,t+.11);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.13);
+    } else if(typingStyle==='mech'){
+      const o=c.createOscillator(); o.type='square'; o.frequency.value=1250+Math.random()*320;
+      const g=c.createGain(); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.045,t+.004); g.gain.exponentialRampToValueAtTime(.0001,t+.028);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.04);
+    } else if(typingStyle==='typewriter'){
+      const dur=.07; const buf=c.createBuffer(1,c.sampleRate*dur,c.sampleRate); const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+      const src=c.createBufferSource(); src.buffer=buf; const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.value=1100;
+      const g=c.createGain(); g.gain.value=.09; src.connect(f);f.connect(g);g.connect(c.destination); src.start();
+    } else {
+      const o=c.createOscillator(); o.type='triangle'; o.frequency.value=1600+Math.random()*700;
+      const g=c.createGain(); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.022,t+.006); g.gain.exponentialRampToValueAtTime(.0001,t+.045);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.06);
+    }
+  }
+  function setStyle(v){ typingStyle=v; }
+  function incoming(){
+    const c=ensure(); if(!c)return; const t=c.currentTime;
+    [[150,0,.2,.16],[96,.04,.16,.2]].forEach(([f,d,v,dur])=>{
+      const o=c.createOscillator(); o.type='sine'; o.frequency.value=f;
+      const g=c.createGain(); g.gain.setValueAtTime(0.0001,t+d); g.gain.exponentialRampToValueAtTime(v,t+d+0.025); g.gain.exponentialRampToValueAtTime(0.0001,t+d+dur);
+      o.connect(g);g.connect(c.destination);o.start(t+d);o.stop(t+d+dur+0.05);}); }
+  function whoosh(){
+    const c=ensure(); if(!c)return; const dur=.32; const buf=c.createBuffer(1,c.sampleRate*dur,c.sampleRate);
+    const d=buf.getChannelData(0); for(let i=0;i<d.length;i++){d[i]=(Math.random()*2-1)*(1-i/d.length);}
+    const src=c.createBufferSource(); src.buffer=buf;
+    const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.setValueAtTime(1800,c.currentTime); f.frequency.exponentialRampToValueAtTime(300,c.currentTime+dur);
+    const g=c.createGain(); g.gain.setValueAtTime(0.0001,c.currentTime); g.gain.exponentialRampToValueAtTime(.14,c.currentTime+.04); g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+dur);
+    src.connect(f);f.connect(g);g.connect(c.destination);src.start(); }
+  return {ensure,typing,incoming,whoosh,setStyle};
+})();
+
+/* ===== 工具 ===== */
+const $=s=>document.querySelector(s);
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+let toastTimer=null;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2100); }
+
+/* ===== 三屏滑动 ===== */
+const screens={profile:document.getElementById('view-profile'),chat:document.getElementById('view-chat'),detail:document.getElementById('view-detail')};
+const pos={profile:-1,chat:0,detail:1};
+let active='chat';
+function showView(v){
+  const shift=pos[v];
+  for(const k in screens){ const p=pos[k]; screens[k].style.transform=`translateX(calc(${p-shift}*100%))`; }
+  active=v;
+  document.querySelectorAll('#view-detail .reveal').forEach(el=>el.classList.remove('on'));
+  stopParticles();
+  if(v==='detail'){
+    requestAnimationFrame(()=>{ document.querySelectorAll('#view-detail .reveal').forEach((el,k)=>{ el.style.transitionDelay=(k*0.12)+'s'; el.classList.add('on'); }); });
+  }
+}
+/* 通用箭头导航 */
+document.querySelectorAll('.arrow-btn').forEach(b=>{
+  b.addEventListener('click',e=>{ e.stopPropagation(); const g=b.getAttribute('data-go'); AudioSys.ensure();
+    if(g==='profile')goToProfile();
+    else if(g==='backchat')returnFromProfile();
+    else if(g==='chat')showView('chat');
+  });
+});
+
+/* ===== 结局红粒子（Canvas，已停用） ===== */
+const pc=document.getElementById('particles'); const pctx=pc.getContext('2d');
+let pRun=false,pArr=[],rafId=null;
+function sizeCanvas(){ pc.width=pc.offsetWidth*devicePixelRatio; pc.height=pc.offsetHeight*devicePixelRatio; }
+function startParticles(){
+  if(pRun)return; pRun=true; sizeCanvas();
+  pArr=Array.from({length:46},()=>({x:Math.random()*100,y:Math.random()*100,r:rnd(1,2.6),s:rnd(.12,.5),o:rnd(.15,.55)}));
+  (function loop(){ if(!pRun){rafId=null;return;} pctx.clearRect(0,0,pc.width,pc.height);
+    pArr.forEach(p=>{ p.y-=p.s; if(p.y<-4){p.y=104;p.x=Math.random()*100;}
+      pctx.beginPath(); pctx.arc(p.x/100*pc.width,p.y/100*pc.height,p.r*devicePixelRatio,0,Math.PI*2);
+      pctx.fillStyle=`rgba(227,58,58,${p.o})`; pctx.fill(); });
+    rafId=requestAnimationFrame(loop); })();
+}
+function stopParticles(){ if(pRun){pRun=false; pctx.clearRect(0,0,pc.width,pc.height); if(rafId){cancelAnimationFrame(rafId);rafId=null;} } }
+window.addEventListener('resize',()=>{ if(pRun)sizeCanvas(); });
+
+/* 卡片行点击发红光（直接绑定，确保可点） */
+function bindRows(){
+  document.querySelectorAll('.tl-card').forEach(el=>{
+    if(el.dataset.bound)return; el.dataset.bound='1';
+    el.addEventListener('click',()=>el.classList.toggle('glow'));
+  });
+}
+bindRows();
+/* ===== 详情页：更多链接 ===== */
+const MORE=[
+  {t:'须知',k:'须知',url:'https://www.kdocs.cn/l/crdKzSV7O7eL'},
+  {t:'话术',k:'话术',url:'https://www.kdocs.cn/l/cpe0xXx3wizN'},
+  {t:'板评',k:'板评',url:'https://www.kdocs.cn/l/cfuhoDUksnop'},
+  {t:'头牌',k:'头牌',url:'https://www.kdocs.cn/l/cnCkcw6K67sd'},
+  {t:'bdsm',k:'bdsm',url:'https://www.kdocs.cn/l/cmCQ81SqBLlS'},
+  {t:'信箱',k:'信箱',url:'https://qntwx.com/SQGSWSZAsk'},
+  {t:'病搭',k:'病搭',url:'https://www.kdocs.cn/l/cqKBqJ1ZbOJn'}
+];
+const moreList=document.getElementById('more-list');
+MORE.forEach(function(m,k){
+  var a=document.createElement('div');
+  a.className='tl-item more-item reveal';
+  a.innerHTML='<div class="tl-card mrow"><span><span class="num">0'+(k+1)+'/</span>'+m.t+'</span><span class="arr">›</span></div>';
+  a.addEventListener('click',function(){ window.location.href=m.url; });
+  moreList.appendChild(a);
+});
+
+
+/* ===== 开场：短信横幅 ===== */
+const notif=$('#notif'), notifYes=$('#notif-yes'), notifNo=$('#notif-no');
+let forcedYes=false;
+setTimeout(()=>{ notif.classList.add('on'); AudioSys.ensure(); AudioSys.incoming(); },900);
+notif.addEventListener('click',()=>{ if(!notif.classList.contains('opened')){notif.classList.add('opened');} });
+window.__no=function(e){ if(e){e.stopPropagation();}
+  if(forcedYes){ beginSplash(); return; }
+  notifNo.classList.add('flash');
+  setTimeout(()=>{ notifNo.classList.remove('flash'); notifNo.textContent='是'; notifNo.classList.add('notif-yes'); forcedYes=true;
+    const h=$('.notif-hint'); if(!h){const n=document.createElement('div');n.className='notif-hint';n.textContent='你只能选择是';notif.appendChild(n);} },
+    1150);
+};
+window.__yes=function(e){ if(e){e.stopPropagation();} beginSplash(); };
+
+/* ===== 启屏动画 ===== */
+async function beginSplash(){
+  AudioSys.ensure();
+  const sp=$('#splash'); sp.classList.add('show');
+  await delay(1500);
+  sp.classList.remove('show');
+  $('#start').style.display='none';
+  showView('chat');
+  startMusic();
+  run();
+}
+
+/* ===== 聊天：消息渲染 ===== */
+const messages=$('#messages');
+function scrollBottom(){ messages.scrollTop=messages.scrollHeight; }
+function renderSys(text){
+  const d=document.createElement('div'); d.className='sysmsg'; d.textContent=text;
+  messages.appendChild(d); scrollBottom(); requestAnimationFrame(()=>d.classList.add('on'));
+}
+function renderBubble(side,text,avatarChar){
+  const m=document.createElement('div'); m.className='msg '+side;
+  if(side==='left'){ const a=document.createElement('div'); a.className='avatar';
+    a.addEventListener('click',()=>{ AudioSys.ensure(); goToProfile(); }); m.appendChild(a); }
+  const b=document.createElement('div'); b.className='bubble '+(side==='left'?'l':'r'); b.textContent=text;
+  m.appendChild(b); messages.appendChild(m); scrollBottom();
+  requestAnimationFrame(()=>m.classList.add('send'));
+}
+function renderTyping(){ 
+  const t=document.createElement('div'); t.className='typingbubble'; t.id='typingbubble';
+  t.innerHTML='<i></i><i></i><i></i>'; messages.appendChild(t); scrollBottom(); return t;
+}
+function showTbDots(on){ $('#tb-inner').style.display=on?'none':'flex'; $('#tb-dots').classList.toggle('show',on); }
+function renderChoices(opts,exclusive){
+  const wrap=document.createElement('div'); wrap.className='choices'; wrap.id='choices';
+  opts.forEach((o,idx)=>{
+    const btn=document.createElement('button'); btn.className='choice'; btn.textContent=o.text; btn.style.animationDelay=(idx*0.08)+'s';
+    btn.addEventListener('click',()=>handleChoice(opts,o,exclusive,wrap));
+    wrap.appendChild(btn);
+  });
+  messages.appendChild(wrap); scrollBottom();
+}
+
+/* ===== 聊天：剧情脚本 ===== */
+const flow=[
+  {t:'sys',text:'你添加了“。”'},
+  {t:'in',text:'我许愿你只和我一个人说话'},
+  {t:'choice',opts:[{text:'…你知道这不可能',act:'send'}]},
+  {t:'in',text:'他们都在浪费你的时间'},
+  {t:'in',text:'他们凭什么？'},
+  {t:'choice',opts:[{text:'点击头像查看她的主页',act:'nav'}]},
+  {t:'choice',exclusive:true,opts:[{text:'你在说什么…',act:'send',branch:'a'},{text:'你要什么？',act:'send',branch:'b'}]},
+  {t:'in',text:'这不公平',show:'a'},
+  {t:'in',text:'我不能独吞你吗？',show:'a'},
+  {t:'in',text:'接受我',show:'b'},
+  {t:'in',text:'到死为止的人生都给我吧',show:'b'},
+  {t:'in',text:'如果我们没有爱会死掉的'},
+  {t:'in',text:'死掉。'},
+  {t:'in',text:'你欲求得到我'},
+  {t:'choice',opts:[{text:'至死方休',act:'ending'}]},
+];
+let i=0,busy=false,chosenBranch=null;
+let firstIncoming=true;
+
+async function run(){
+  if(busy)return; busy=true;
+  while(i<flow.length){
+    const s=flow[i];
+    if(s.show && s.show!==chosenBranch){ i++; continue; }
+    if(s.t==='sys'){ renderSys(s.text); await delay(950); i++; }
+    else if(s.t==='in'){ await typeIn(s.text); i++; }
+    else if(s.t==='choice'){ renderChoices(s.opts,s.exclusive); busy=false; return; }
+  }
+  busy=false;
+}
+
+async function typeIn(text){
+  const typingEl=renderTyping(); showTbDots(true);
+  const t=AudioSys; 
+  const clicks=setInterval(()=>t.typing(),170);
+  await delay(rnd(900,1450));
+  clearInterval(clicks);
+  showTbDots(false);
+  if(typingEl.parentNode)typingEl.parentNode.removeChild(typingEl);
+  renderBubble('left',text,'。');
+  t.incoming();
+  await delay(420);
+  return;
+}
+
+function handleChoice(opts,o,exclusive,wrap){
+  AudioSys.ensure();
+  if(wrap.parentNode)wrap.parentNode.removeChild(wrap);
+  if(o.act==='send'){ renderBubble('right',o.text); AudioSys.whoosh(); if(exclusive)chosenBranch=o.branch; i++; run(); }
+  else if(o.act==='nav'){ i++; goToProfile(); }
+  else if(o.act==='ending'){ beginEnding(); }
+}
+
+/* ===== 个人主页返回按钮 ===== */
+const profScroll=$('#profile-scroll'), profReturn=$('#profile-return');
+profScroll.addEventListener('scroll',()=>{
+  const near=profScroll.scrollTop+profScroll.clientHeight>=profScroll.scrollHeight-40;
+  const fits=profScroll.scrollHeight<=profScroll.clientHeight+10;
+  profReturn.classList.toggle('show', near || fits);
+});
+profReturn.addEventListener('click',()=>{ AudioSys.ensure(); returnFromProfile(); });
+profScroll.dispatchEvent(new Event('scroll'));
+
+/* 标签点击：灰→红 交互动效 */
+$('#tagrow').addEventListener('click',e=>{
+  const t=e.target.closest('.tag'); if(!t)return;
+  t.classList.toggle('on'); AudioSys.ensure(); AudioSys.typing();
+});
+
+/* style-small 随机取部分文字变红 */
+(function(){
+  const el=$('#style-small'); const segs=el.textContent.split('·');
+  el.textContent='';
+  segs.forEach((s,i)=>{
+    const sp=document.createElement('span');
+    if(Math.random()<0.36){ sp.className='rd'; }
+    sp.textContent=(i? '·':'') + s;
+    el.appendChild(sp);
+  });
+})();
+
+/* ===== 主页进出 ===== */
+function goToProfile(){ showView('profile'); }
+function returnFromProfile(){ showView('chat'); run(); }
+function goToDetail(){ showView('detail'); }
+
+/* ===== 结局 ===== */
+async function beginEnding(){
+  const end=$('#ending'); end.classList.add('show');
+  const line=$('#end-line');
+  await delay(500);
+  line.classList.add('on'); AudioSys.incoming();
+  await delay(1400);
+  const yes=$('#end-yes'); yes.classList.add('on'); AudioSys.whoosh();
+}
+$('#end-yes').addEventListener('click',()=>{
+  AudioSys.ensure(); AudioSys.whoosh();
+  $('#ending').classList.remove('show');
+  showView('detail');
+});
+
+/* 音乐控制 */
+const bgm=$('#bgm'), musicBtn=$('#music-toggle');
+let musicOn=false;
+function startMusic(){
+  if(musicOn)return;
+  bgm.volume=.35;
+  bgm.play().then(()=>{ musicOn=true; musicBtn.classList.add('playing'); }).catch(()=>{});
+}
+musicBtn.addEventListener('click',()=>{
+  AudioSys.ensure();
+  if(musicOn){ bgm.pause(); musicOn=false; musicBtn.classList.remove('playing'); }
+  else { bgm.play().then(()=>{musicOn=true;musicBtn.classList.add('playing');}).catch(()=>{}); }
+});
+/* 右上角"…"按钮：点一下显示备注 */
+$('.chat-menu-btn').addEventListener('click',()=>{ toast('备注 · 乌帕斯'); });
+
+/* 初始定位（放在脚本末尾，确保粒子等变量均已就绪） */
+showView('chat');
+</script>
+</body>
+</html>
